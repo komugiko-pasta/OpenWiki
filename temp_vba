@@ -1,0 +1,58 @@
+Sub RdSiiInf()
+    Dim inputFileName As String
+    Dim inputFn As Integer
+
+    Dim buffer() As Byte
+
+    Dim outputFileName As String
+    Dim outputFn As Long
+
+    '読み込むファイル
+    inputFileName = "D:\MyFolder\Program\VBA\outData"
+
+    '空いているファイル番号
+    inputFn = FreeFile
+
+    'バイナリファイル読み込み
+    Open inputFileName For Binary As #inputFn
+        'ファイルの長さで配列を初期化
+        ReDim buffer(LOF(inputFn))
+
+        'ファイルをバイナリで読み込んでByte配列に格納
+        Get #inputFn, , buffer
+    Close #inputFn
+    
+    'Mandatory Areaの出力
+    Dim index As Integer: index = 0
+    Dim cnt As Integer
+    For cnt = 0 To 128 - 1
+        Cells(1, 1 + cnt).NumberFormatLocal = "@"
+        Cells(1, 1 + cnt).Value = Right("0" & Hex(buffer(cnt)), 2)
+    Next
+    index = index + 128
+    
+    'Additional Areaの出力
+    Dim n As Integer
+    For n = 2 To 10                                         '10は適当。範囲を超えたらオーバーフローして止まるのでそれで良しとする
+        Call CatInfRd(index, buffer, n)
+    Next
+
+End Sub
+
+Function CatInfRd(ByRef index As Integer, buffer() As Byte, outputLaw As Integer)
+    'カテゴリーのサイズ取得
+    Dim datSize As Integer
+    datSize = (buffer(index + 2) + buffer(index + 3) * 256) * 2                     'データサイズは2,3byte目にリトルエンディアンで記述されている。ワード単位のためバイト単位に変換。
+    catSize = datSize + 4                                                           'カテゴリのサイズ＝ヘッダサイズ(4byte)＋データサイズ
+    
+    'データ出力
+    Dim cnt As Integer
+    For cnt = 0 To catSize
+        Cells(outputLaw, 1 + cnt).NumberFormatLocal = "@"                           '書式を文字列にする
+        Cells(outputLaw, 1 + cnt).Value = Right("0" & Hex(buffer(index + cnt)), 2)  '10進数から16進数へ変換、0埋めするために、左に0を文字列結合したのち、2桁にする
+    Next
+    
+    'indexを進める
+    index = index + catSize
+    
+End Function
